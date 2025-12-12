@@ -6,6 +6,7 @@
     <title>🌡️ SCADA - Monitoreo y Control Ambiental BLE</title>
     <style>
         /* Paleta de Colores Estilo SCADA: */
+        /* Fondo Oscuro */
         :root {
             --bg-dark: #2c3e50; /* Azul/Gris oscuro */
             --bg-card: #34495e; /* Fondo de tarjetas */
@@ -77,54 +78,33 @@
         .temperature {
             font-size: 1.8em;
             font-weight: bold;
-            color: var(--color-alarm);
+            color: var(--color-alarm); /* Temperaturas en rojo/alarma por defecto */
         }
         #temp_avg {
-            color: var(--color-highlight);
+            color: var(--color-highlight); /* Promedio en amarillo/naranja */
         }
         
-        /* --- ESTILOS MEJORADOS PARA EL SWITCH --- */
-        .mode-switch-container { 
-            text-align: center; 
-            margin-bottom: 10px; 
-            width: 100%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-        }
-        .mode-label { 
-            font-weight: bold; 
-            margin-bottom: 10px; 
-            color: var(--color-info); 
-            width: 100%; /* Asegura que el texto "Modo Actual" se centre */
-        }
-        .switch { 
-            position: relative; 
-            display: inline-block; 
-            width: 60px; 
-            height: 34px; 
-            margin: 0 10px;
-        }
-        .switch input { 
-            opacity: 0; 
-            width: 0; 
-            height: 0; 
-        }
-        
-        /* El slider (track/pista) */
-        .slider {
+        /* Estilos para el Switch */
+        .mode-switch-container { text-align: center; margin-bottom: 10px; width: 100%; }
+        .mode-label { font-weight: bold; margin-bottom: 10px; color: var(--color-info); }
+        .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { 
             position: absolute;
             cursor: pointer;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: var(--color-alarm); /* Fondo inicial: Rojo (Manual) */
+            background-color: var(--color-alarm); 
             transition: .4s;
+        }
+        .slider.round {
             border-radius: 34px;
         }
-
-        /* El control (thumb/círculo) */
+        .slider.round:before {
+            border-radius: 50%;
+        }
         .slider:before {
             position: absolute;
             content: "";
@@ -132,32 +112,16 @@
             width: 26px;
             left: 4px;
             bottom: 4px;
-            background-color: var(--text-light);
+            background-color: var(--text-light); 
             transition: .4s;
-            border-radius: 50%;
         }
-
-        /* Cuando está checked: Mover el thumb y cambiar el fondo */
-        input:checked + .slider {
-            background-color: var(--color-ok); /* Fondo: Verde (Automático) */
-        }
-
+        input:checked + .slider { background-color: var(--color-ok); }
         input:checked + .slider:before {
             transform: translateX(26px);
         }
-
-        .mode-text { 
-            font-size: 1.2em; 
-            font-weight: bold; 
-            margin: 0 15px; 
-            transition: opacity 0.3s;
-        }
-        .mode-text.inactive {
-            opacity: 0.4; /* Atenuar el modo no seleccionado */
-        }
-        #auto-text { color: var(--color-ok); }
-        #manual-text { color: var(--color-alarm); }
-        /* --- FIN ESTILOS SWITCH --- */
+        .mode-text { font-size: 1.2em; font-weight: bold; margin: 0 15px; color: #555; }
+        #auto-text { color: var(--color-ok); } /* Automático en Verde */
+        #manual-text { color: var(--color-alarm); } /* Manual en Rojo */
         
         /* Estilos Actuadores */
         .actuator-card { background-color: var(--bg-card); }
@@ -175,6 +139,59 @@
         }
         .actuator-status.on {
             color: var(--color-ok);
+        }
+
+        /* Estilos del Modal (Reemplazo de alert/prompt) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none; /* Oculto por defecto */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: var(--bg-card);
+            border: 2px solid var(--color-highlight);
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            width: 90%;
+            max-width: 350px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+        }
+        .modal-content h3 {
+            color: var(--color-highlight);
+            margin-bottom: 15px;
+        }
+        #passwordInput {
+            width: 80%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid var(--text-light);
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            text-align: center;
+            font-size: 1em;
+        }
+        .modal-actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-around;
+        }
+        .message-area {
+            min-height: 20px;
+            color: var(--color-alarm);
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .modal-overlay.show {
+            display: flex;
         }
         
     </style>
@@ -237,14 +254,26 @@
             <div id="temp_s4" class="temperature">--.-</div>
         </div>
     </div>
+    
+    <!-- Custom Password Modal para Modo Manual -->
+    <div id="passwordModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Acceso a Modo Manual</h3>
+            <p>Introduce la contraseña para cambiar a Modo MANUAL.</p>
+            <input type="password" id="passwordInput" placeholder="Contraseña (1234)">
+            <div id="passwordMessage" class="message-area"></div>
+            <div class="modal-actions">
+                <button id="modalConfirm" class="on">Confirmar</button>
+                <button id="modalCancel" class="off">Cancelar</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // --- CONFIGURACIÓN DE SEGURIDAD ---
-        // ¡CAMBIA ESTA CONTRASEÑA EN UN ENTORNO REAL!
         const MANUAL_MODE_PASSWORD = "1234"; 
 
         // --- UUIDs (Deben coincidir con tu código ESP32) ---
-        const DEVICE_NAME = 'TUVN_Termometros'; // Usaremos el nombre para el filtro
         const SERVICE_UUID = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
         const NOTIFY_CHARACTERISTIC_UUID = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
         const CONTROL_CHARACTERISTIC_UUID = '6e400002-b5a3-f39f-e0a9-e50e24dcca9e';
@@ -277,6 +306,13 @@
             s4: document.getElementById('temp_s4')
         };
         
+        // Elementos del Modal de Contraseña
+        const passwordModal = document.getElementById('passwordModal');
+        const passwordInput = document.getElementById('passwordInput');
+        const passwordMessage = document.getElementById('passwordMessage');
+        const modalConfirm = document.getElementById('modalConfirm');
+        const modalCancel = document.getElementById('modalCancel');
+        
         let controlState = {
             mode: 1,      // 1: Automático, 0: Manual
             fan_man: 0,   // Control Manual Ventilador
@@ -291,13 +327,73 @@
         fanOffButton.addEventListener('click', () => setManualControl('fan', 0));
         heaterOnButton.addEventListener('click', () => setManualControl('heat', 1));
         heaterOffButton.addEventListener('click', () => setManualControl('heat', 0));
+        
+        // Listeners para el Modal
+        modalConfirm.addEventListener('click', checkPassword);
+        modalCancel.addEventListener('click', hidePasswordModal);
+        passwordInput.addEventListener('keydown', (e) => {
+             if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
 
-        // Inicializar interfaz
+
+        // Inicializar
         updateInterfaceControl();
 
         // ----------------------------------------------------------------------------------
-        // --- LÓGICA DE CONTROL Y SEGURIDAD ---
+        // --- LÓGICA DE CONTROL Y SEGURIDAD (ACTUALIZADA CON MODAL) ---
         // ----------------------------------------------------------------------------------
+        
+        /**
+         * Muestra el modal de contraseña.
+         */
+        function showPasswordModal() {
+            passwordInput.value = ''; 
+            passwordMessage.textContent = ''; 
+            passwordModal.classList.add('show');
+            passwordInput.focus();
+        }
+
+        /**
+         * Oculta el modal de contraseña.
+         */
+        function hidePasswordModal() {
+            passwordModal.classList.remove('show');
+        }
+
+        /**
+         * Verifica la contraseña introducida en el modal.
+         */
+        function checkPassword() {
+            const passwordAttempt = passwordInput.value;
+            
+            if (passwordAttempt === MANUAL_MODE_PASSWORD) {
+                // Contraseña correcta
+                passwordMessage.textContent = 'Contraseña correcta. Cambiando a Manual.';
+                passwordMessage.style.color = var(--color-ok);
+                
+                // 1. Aplicar el cambio de estado
+                controlState.mode = 0; // Modo Manual
+                controlState.fan_man = 0; // Apagar actuadores por defecto
+                controlState.heat_man = 0;
+                
+                // 2. Actualizar switch visual y la interfaz
+                modeSwitch.checked = false; // Mover el switch visual a OFF/Manual
+                updateInterfaceControl();
+                sendControlCommand();
+                
+                // 3. Ocultar modal después de un breve momento
+                setTimeout(hidePasswordModal, 500);
+            } else {
+                // Contraseña incorrecta
+                passwordMessage.textContent = 'Contraseña incorrecta. Inténtalo de nuevo.';
+                passwordMessage.style.color = var(--color-alarm);
+                passwordInput.value = '';
+                passwordInput.focus();
+            }
+        }
+
 
         /**
          * Maneja el cambio de modo con validación de contraseña.
@@ -307,26 +403,21 @@
             
             // Si intenta cambiar de AUTOMÁTICO (1) a MANUAL (0)
             if (!isChecked && controlState.mode === 1) { 
-                const passwordAttempt = prompt("MODO MANUAL requiere contraseña:");
+                // 1. Revierte el switch visualmente a Auto (checked=true) temporalmente
+                //    hasta que la contraseña sea validada o cancelada.
+                modeSwitch.checked = true; 
+                // 2. Muestra el modal de contraseña
+                showPasswordModal();
                 
-                if (passwordAttempt !== MANUAL_MODE_PASSWORD) {
-                    alert("Contraseña incorrecta. Se mantiene en Modo AUTOMÁTICO.");
-                    // Revertir el estado del switch en la interfaz (Mantener en ON/checked)
-                    modeSwitch.checked = true;
-                    // Forzar la actualización visual para corregir si el navegador lo movió antes
-                    updateInterfaceControl(); 
-                    return; // No cambia el modo
-                }
-                
-                // Contraseña correcta: Iniciar modo manual con actuadores apagados
-                controlState.fan_man = 0;
-                controlState.heat_man = 0;
+            } 
+            // Si cambia de MANUAL (0) a AUTOMÁTICO (1), no requiere contraseña
+            else if (isChecked && controlState.mode === 0) {
+                controlState.mode = 1;
+                updateInterfaceControl();
+                sendControlCommand();
             }
-
-            // Si pasa la seguridad (o si cambia de Manual a Auto), actualiza el estado
-            controlState.mode = isChecked ? 1 : 0; // 1: Auto, 0: Manual
-            updateInterfaceControl();
-            sendControlCommand();
+            // NOTA: Si la contraseña es correcta, checkPassword() se encarga de cambiar el modo
+            // controlState.mode = 0 y de mover el modeSwitch.checked = false.
         }
 
 
@@ -335,21 +426,21 @@
          */
         function setManualControl(actuator, state) {
             if (controlState.mode === 0) {
-                // Lógica de exclusividad (Ventilador y Calefactor no pueden estar ON al mismo tiempo)
                 if (actuator === 'fan') {
-                    if (state === 1) controlState.heat_man = 0; // Apagar calefactor si se enciende el ventilador
+                    // Si se enciende el ventilador, asegurar que el calefactor esté OFF
+                    if (state === 1) controlState.heat_man = 0;
                     controlState.fan_man = state;
                 } else if (actuator === 'heat') {
-                    if (state === 1) controlState.fan_man = 0; // Apagar ventilador si se enciende el calefactor
+                    // Si se enciende el calefactor, asegurar que el ventilador esté OFF
+                    if (state === 1) controlState.fan_man = 0;
                     controlState.heat_man = state;
                 }
                 
                 updateInterfaceControl(); 
                 sendControlCommand();    
             } else {
-                alert("Para el control manual, por favor, cambia primero a Modo MANUAL. (Requiere contraseña)");
-                // Asegurar que el switch visual esté en Automático
-                modeSwitch.checked = true; 
+                // Mostrar mensaje de advertencia usando la consola (evitando alert())
+                console.warn("Para el control manual, por favor, cambia primero a Modo MANUAL.");
             }
         }
 
@@ -366,6 +457,9 @@
                 return;
             }
 
+            // Aseguramos que el estado del modo en el switch coincida con el controlState
+            modeSwitch.checked = (controlState.mode === 1);
+            
             const commandString = JSON.stringify(controlState);
             console.log("Enviando comando: " + commandString);
 
@@ -374,30 +468,16 @@
                 await controlCharacteristic.writeValue(encoder.encode(commandString));
             } catch (error) {
                 console.error("Error al escribir en la característica BLE:", error);
-                // Si hay un error de escritura, es probable que la conexión se haya perdido
-                statusDiv.textContent = '❌ Error al enviar comando. Revisando conexión...';
-                // Intenta verificar la desconexión
-                if (device && !device.gatt.connected) {
-                    onDisconnected({ target: device }); 
-                }
+                statusDiv.textContent = '❌ Error al enviar comando: ' + error.message;
             }
         }
         
         /**
-         * Actualiza la apariencia de los elementos de control manual (botones, opacidad) y el modo.
+         * Actualiza la apariencia de los elementos de control manual (botones, opacidad).
          */
         function updateInterfaceControl() {
             const isManual = controlState.mode === 0;
             currentModeDisplay.textContent = isManual ? 'Manual' : 'Automático';
-            
-            // Lógica de atenuación de texto del modo
-            if (isManual) {
-                manualText.classList.remove('inactive');
-                autoText.classList.add('inactive');
-            } else { // Automático
-                manualText.classList.add('inactive');
-                autoText.classList.remove('inactive');
-            }
             
             // Habilitar/Deshabilitar botones manuales
             fanControlDiv.style.opacity = isManual ? 1 : 0.5;
@@ -409,7 +489,7 @@
             
             // Resaltar botones de control manual (solo si está en modo Manual)
             if (isManual) {
-                // Actualizar resaltado de botones (borde blanco para el estado activo)
+                // Actualizar resaltado de botones (borde blanco para el botón activo)
                 fanOnButton.style.border = controlState.fan_man === 1 ? '3px solid white' : 'none';
                 fanOffButton.style.border = controlState.fan_man === 0 ? '3px solid white' : 'none';
                 heaterOnButton.style.border = controlState.heat_man === 1 ? '3px solid white' : 'none';
@@ -419,68 +499,4 @@
                 fanOnButton.style.border = 'none';
                 fanOffButton.style.border = 'none';
                 heaterOnButton.style.border = 'none';
-                heaterOffButton.style.border = 'none';
-            }
-        }
-
-        /**
-         * Actualiza el estado visual de los actuadores (estado real recibido del ESP32).
-         */
-        function updateActuatorStatus(fanState, heaterState) {
-            fanStatusDiv.textContent = `Estado: ${fanState ? 'ON' : 'OFF'}`;
-            fanStatusDiv.classList.toggle('on', fanState === 1);
-            
-            heaterStatusDiv.textContent = `Estado: ${heaterState ? 'ON' : 'OFF'}`;
-            heaterStatusDiv.classList.toggle('on', heaterState === 1);
-        }
-
-        // ----------------------------------------------------------------------------------
-        // --- FUNCIONES BLE ESTÁNDAR (MEJORADAS) ---
-        // ----------------------------------------------------------------------------------
-
-        async function connectToBLE() {
-            if (!navigator.bluetooth) {
-                statusDiv.textContent = '❌ Web Bluetooth no soportado en este navegador.';
-                console.error('Web Bluetooth API not available.');
-                return;
-            }
-            
-            try {
-                statusDiv.textContent = 'Buscando dispositivo...';
-                
-                // 1. Solicitar Dispositivo
-                device = await navigator.bluetooth.requestDevice({
-                    // Puedes buscar por nombre O por UUIDs, usando filtros para aumentar la probabilidad de éxito.
-                    filters: [{ name: DEVICE_NAME }], 
-                    // Usar optionalServices permite que el navegador muestre más dispositivos y luego filtre.
-                    optionalServices: [SERVICE_UUID] 
-                });
-
-                // Registrar el listener de desconexión antes de conectar
-                device.addEventListener('gattserverdisconnected', onDisconnected);
-                
-                statusDiv.textContent = `Conectando a ${device.name}...`;
-                
-                // 2. Conectar al GATT Server
-                server = await device.gatt.connect();
-                statusDiv.textContent = 'Servidor GATT conectado. Buscando servicio...';
-
-                // 3. Obtener Servicio
-                service = await server.getPrimaryService(SERVICE_UUID);
-                statusDiv.textContent = 'Servicio encontrado. Buscando características...';
-
-                // 4. Obtener Características
-                notifyCharacteristic = await service.getCharacteristic(NOTIFY_CHARACTERISTIC_UUID);
-                controlCharacteristic = await service.getCharacteristic(CONTROL_CHARACTERISTIC_UUID);
-                statusDiv.textContent = 'Características encontradas. Iniciando notificaciones...';
-
-                // 5. Iniciar Notificaciones
-                await notifyCharacteristic.startNotifications();
-                notifyCharacteristic.addEventListener('characteristicvaluechanged', handleNotifications);
-
-                statusDiv.textContent = '✅ Conectado y recibiendo datos.';
-                connectButton.textContent = 'Desconectar';
-                connectButton.removeEventListener('click', connectToBLE);
-                connectButton.addEventListener('click', disconnectBLE);
-
-                // Enviar estado d
+                heaterOffButton.s
